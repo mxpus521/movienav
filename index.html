@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>网飞电影导航</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
+    <style>
+      :root {
+        --bg-color: #141414;
+        --card-bg: #181818;
+        --card-hover: #232323;
+        --text-primary: #fff;
+        --text-secondary: #a3a3a3;
+        --accent-color: #e50914;
+        --header-height: 70px;
+        --header-height-mobile: 60px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg-color);
+        color: var(--text-primary);
+        line-height: 1.5;
+        min-height: 100vh;
+        /* 适配刘海屏 */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+
+      /* 头部样式优化 */
+      .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        height: var(--header-height);
+        padding: 0 4%;
+        background: linear-gradient(
+          180deg,
+          rgba(20, 20, 20, 0.95) 0%,
+          rgba(20, 20, 20, 0.75) 50%,
+          rgba(20, 20, 20, 0) 100%
+        );
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        display: flex;
+        align-items: center;
+        transition: background 0.3s ease, height 0.3s ease;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .logo {
+        font-size: 28px;
+        color: var(--accent-color);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .site-name {
+        color: var(--text-primary);
+        font-size: clamp(1.2rem, 3vw, 1.5rem); /* 字体大小随视口平滑缩放 */
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      /* 仅在支持 hover 的设备上启用悬停效果 */
+      @media (hover: hover) {
+        .logo-container:hover .logo {
+          transform: rotate(15deg) scale(1.1);
+        }
+      }
+
+      /* 主体内容区域 */
+      .main-content {
+        padding: calc(var(--header-height) + 40px) 4% 60px;
+        max-width: 1600px; /*在大屏幕上限制最大宽度 */
+        margin: 0 auto;
+        min-height: 100vh;
+      }
+
+      .section-title {
+        font-size: clamp(1.5rem, 4vw, 2rem);
+        margin-bottom: 32px;
+        font-weight: 700;
+        color: var(--text-primary);
+        position: relative;
+        padding-left: 16px;
+      }
+
+      .section-title::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 70%;
+        background-color: var(--accent-color);
+        border-radius: 2px;
+      }
+
+      /* 网格布局优化 */
+      .sites-grid {
+        display: grid;
+        /* 智能列宽：最小 280px，但在更小的屏幕上允许缩小到 100% */
+        grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+        gap: 24px;
+      }
+
+      /* 卡片样式 */
+      .site-card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, background-color 0.2s ease,
+          box-shadow 0.2s ease;
+        height: 100%; /* 确保同一行卡片高度一致 */
+      }
+
+      .site-title {
+        font-size: 1.25rem;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+      }
+
+      .site-icon-img {
+        font-size: 1.4rem;
+        color: var(--accent-color);
+        flex-shrink: 0;
+      }
+
+      .site-desc {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 20px;
+        flex-grow: 1; /* 让描述撑开空间，把标签推到底部 */
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* 限制描述最多3行 */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .site-tags {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: auto; /* 靠底部对齐 */
+      }
+
+      .tag {
+        background: rgba(229, 9, 20, 0.15);
+        color: #ff4d4d;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      /* 交互效果 */
+      @media (hover: hover) {
+        .site-card:hover {
+          transform: translateY(-4px);
+          background: var(--card-hover);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+          border-color: rgba(229, 9, 20, 0.3);
+        }
+
+        .site-card:hover .site-icon-img {
+          transform: scale(1.1);
+        }
+      }
+
+      .site-card:active {
+        transform: scale(0.98);
+        background: #2a2a2a;
+      }
+
+      /* ------ 响应式断点优化 ------ */
+
+      /* 平板/小笔记本 (max-width: 1024px) */
+      @media (max-width: 1024px) {
+        .sites-grid {
+          gap: 20px;
+        }
+      }
+
+      /* 移动设备 (max-width: 768px) */
+      @media (max-width: 768px) {
+        .header {
+          height: var(--header-height-mobile);
+          padding: 0 5%;
+          background: #141414; /* 移动端Header通常不需要太强的透明渐变 */
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logo {
+          font-size: 24px;
+        }
+
+        .main-content {
+          padding: calc(var(--header-height-mobile) + 24px) 5% 40px;
+        }
+
+        .section-title {
+          margin-bottom: 24px;
+        }
+
+        .sites-grid {
+          /* 移动端间距稍小 */
+          gap: 16px;
+        }
+
+        .site-card {
+          padding: 20px;
+        }
+
+        .site-title {
+          font-size: 1.1rem;
+        }
+      }
+
+      /* 小屏手机 (max-width: 480px) */
+      @media (max-width: 480px) {
+        .sites-grid {
+          /* 单列布局，但在非常窄的屏幕上也能适应 */
+          grid-template-columns: 1fr;
+        }
+
+        .site-desc {
+          font-size: 0.85rem;
+          -webkit-line-clamp: 2; /* 小屏幕只显示2行描述，节省空间 */
+        }
+        
+        .section-title {
+           font-size: 1.3rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo-container" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="fa-solid fa-film logo"></i>
+        <span class="site-name">Movie Navigator</span>
+      </div>
+    </header>
+
+    <template id="site-card-template">
+      <div class="site-card">
+        <h3 class="site-title">
+          <i class="site-icon-img"></i>
+          <span class="title-text"></span>
+        </h3>
+        <p class="site-desc"></p>
+        <div class="site-tags"></div>
+      </div>
+    </template>
+
+    <main class="main-content">
+      <h2 class="section-title">热门影视导航</h2>
+      <div class="sites-grid" id="sites-container">
+        <!-- JavaScript 将在此处插入内容 -->
+      </div>
+    </main>
+
+    <script type="application/json" id="sites-data">
+      {
+        "sites": [
+          {
+            "name": "磁力熊",
+            "url": "https://www.cilixiong.com/",
+            "icon": "fa-solid fa-magnet",
+            "description": "提供高清电影、电视剧、动漫资源下载，支持迅雷磁力下载。更新速度快，资源丰富。",
+            "tags": ["磁力下载", "高清资源"]
+          },
+          {
+            "name": "火车太堵",
+            "url": "https://tdgo.shop/",
+            "icon": "fa-solid fa-train",
+            "description": "提供高清电影、电视剧、动漫资源，更新速度快。",
+            "tags": ["高清资源", "更新快"]
+          },
+          {
+            "name": "低端影视",
+            "url": "https://ddys.la/",
+            "icon": "fa-solid fa-video",
+            "description": "在线观看影视剧，画质优良，更新及时。",
+            "tags": ["在线观看", "无广告"]
+          },
+          {
+            "name": "555电影",
+            "url": "https://www.5iltmgi.shop/index/home.html",
+            "icon": "fa-solid fa-play",
+            "description": "提供最新影视资源，支持在线观看。",
+            "tags": ["在线播放", "更新快"]
+          },
+          {
+            "name": "桃子影视",
+            "url": "https://www.taozi008.com/index.html",
+            "icon": "fa-solid fa-apple-whole",
+            "description": "丰富的影视资源库，支持在线观看。",
+            "tags": ["免费观看", "资源多"]
+          },
+          {
+            "name": "飘零影院",
+            "url": "https://www.tzqjdy.com/",
+            "icon": "fa-solid fa-film",
+            "description": "提供海量影视资源，支持在线播放。",
+            "tags": ["在线播放", "高清"]
+          },
+          {
+            "name": "硬核指南",
+            "url": "https://yinghezhinan.com/",
+            "icon": "fa-solid fa-compass",
+            "description": "专注于美剧资源，更新及时。",
+            "tags": ["美剧资源", "更新快"]
+          },
+          {
+            "name": "注视影视",
+            "url": "https://gaze.run/",
+            "icon": "fa-solid fa-eye",
+            "description": "提供最新电影电视剧在线观看。",
+            "tags": ["在线播放", "资源全"]
+          },
+          {
+            "name": "hdmoli",
+            "url": "https://www.hdmoli.pro/",
+            "icon": "fa-solid fa-magnifying-glass",
+            "description": "影视搜索引擎，帮您找到想看的影视资源。",
+            "tags": ["搜索引擎", "资源聚合"]
+          },
+          {
+            "name": "厂长资源",
+            "url": "https://www.czzy77.com/",
+            "icon": "fa-solid fa-user-tie",
+            "description": "影视搜索引擎，帮您找到想看的影视资源。",
+            "tags": ["搜索引擎", "资源聚合"]
+          },
+          {
+            "name": "NO视频",
+            "url": "https://www.novipnoad.net/",
+            "icon": "fa-solid fa-circle-play",
+            "description": "海量影视资源在线观看，更新及时。",
+            "tags": ["在线播放", "更新快"]
+          },
+          {
+            "name": "libvio",
+            "url": "https://www.libvio.link/",
+            "icon": "fa-solid fa-photo-film",
+            "description": "海量影视资源在线观看，更新及时。",
+            "tags": ["在线播放", "更新快"]
+          },
+          {
+            "name": "修罗影视",
+            "url": "https://www.xlys01.com/",
+            "icon": "fa-solid fa-mask",
+            "description": "海量影视资源在线观看，更新及时。",
+            "tags": ["在线播放", "更新快"]
+          },
+          {
+            "name": "独播库",
+            "url": "https://duboku.info/",
+            "icon": "fa-solid fa-tv",
+            "description": "海量影视资源在线观看，更新及时。",
+            "tags": ["在线播放", "更新快"]
+          },
+          {
+            "name": "爱壹帆",
+            "url": "https://www.iyf.tv/",
+            "icon": "fa-solid fa-sailboat",
+            "description": "海量高清视频免费在线观看，提供最新电影、电视剧、综艺和动漫资源。",
+            "tags": ["免费观看", "高清视频"]
+          }
+        ]
+      }
+    </script>
+
+    <script>
+      // 滚动效果优化：添加节流 (Optional for performance, but simple check is okay)
+      let lastScrollY = window.scrollY;
+      const header = document.querySelector(".header");
+
+      window.addEventListener("scroll", () => {
+        const currentScrollY = window.scrollY;
+        
+        // 当滚动超过一定距离，背景变深
+        if (currentScrollY > 20) {
+          header.style.background = "rgba(20, 20, 20, 0.98)";
+          header.style.boxShadow = "0 4px 30px rgba(0, 0, 0, 0.5)";
+        } else {
+          header.style.background = "linear-gradient(180deg, rgba(20, 20, 20, 0.95) 0%, rgba(20, 20, 20, 0) 100%)";
+          header.style.boxShadow = "none";
+        }
+        
+        lastScrollY = currentScrollY;
+      }, { passive: true });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const template = document.getElementById("site-card-template");
+        const container = document.getElementById("sites-container");
+        const sitesData = JSON.parse(
+          document.getElementById("sites-data").textContent
+        );
+
+        sitesData.sites.forEach((site) => {
+          const cardClone = template.content.cloneNode(true);
+          const cardEl = cardClone.querySelector(".site-card");
+
+          // 设置点击事件
+          cardEl.onclick = () => window.open(site.url);
+          
+          // 添加键盘无障碍支持
+          cardEl.setAttribute("tabindex", "0");
+          cardEl.onkeydown = (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              window.open(site.url);
+            }
+          };
+
+          // 设置图标和标题
+          const icon = cardClone.querySelector(".site-icon-img");
+          // 处理图标字符串，确保没有重复类名
+          icon.className = `site-icon-img ${site.icon}`;
+          
+          cardClone.querySelector(".title-text").textContent = site.name;
+
+          // 设置描述
+          cardClone.querySelector(".site-desc").textContent = site.description;
+
+          // 设置标签
+          const tagsContainer = cardClone.querySelector(".site-tags");
+          // 限制只显示前3个标签以防溢出
+          site.tags.slice(0, 3).forEach((tag) => {
+            const span = document.createElement("span");
+            span.className = "tag";
+            span.textContent = tag;
+            tagsContainer.appendChild(span);
+          });
+
+          container.appendChild(cardClone);
+        });
+      });
+    </script>
+  </body>
+</html>
